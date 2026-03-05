@@ -533,11 +533,14 @@ let rec eval_one_simple op stack context =
   | DW_OP_piece(n) ->
      (match stack with
       | element::Loc(Composite(parts), off)::stack' ->
-         let loc = as_loc element
-         in let new_part = (match parts with
-                            | [] -> (0, n, loc)
-                            | (s, e, _)::_ -> (e, e + n, loc))
-            in Loc(Composite(new_part::parts), off)::stack'
+         let loc = as_loc element in
+         let (p_storage, p_offset) = loc in
+         if n > (data_size p_storage context) - p_offset then
+           eval_error "DW_OP_piece: storage must be big enough for piece size"
+         else let new_part = (match parts with
+                              | [] -> (0, n, loc)
+                              | (s, e, _)::_ -> (e, e + n, loc))
+              in Loc(Composite(new_part::parts), off)::stack'
 
       (* Compatibility rules.  *)
       | [] ->
@@ -1067,6 +1070,20 @@ let _ =
   let loc = eval_to_loc locexpr context in
   test loc (Composite [(5, 8, (Undefined, 0)); (0, 5, (Reg 4, 0))], 0)
     "DW_OP_piece: on a single composite location"
+
+(* DW_OP_piece error case.  *)
+let _ =
+  let locexpr1 = [DW_OP_reg6; (* Size of reg is 4.  *)
+                  DW_OP_piece 4] in
+  let locexpr2 = [DW_OP_reg6;
+                  DW_OP_lit2;
+                  DW_OP_offset;
+                  DW_OP_piece 3] in
+  test (eval_to_loc locexpr1 context)
+    (Composite [(0, 4, (Reg 6, 0))], 0)
+    "DW_OP_piece: piece as large as storage";
+  test_error (fun () -> eval_to_loc locexpr2 context)
+    "DW_OP_piece: piece larger than storage"
 
 (* An array, whose values are "0123456789ABCDEF".  The elements "89AB"
    are in register 6, the others are in the memory.  This example
