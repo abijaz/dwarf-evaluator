@@ -24,6 +24,7 @@ type dwarf_op =
 
   | DW_OP_plus
   | DW_OP_plus_uconst of int
+  | DW_OP_minus
   | DW_OP_mul
   | DW_OP_dup
   | DW_OP_drop
@@ -336,20 +337,20 @@ let rec eval_one_simple op stack context =
   | DW_OP_lit30 -> Val(30)::stack
   | DW_OP_lit31 -> Val(31)::stack
 
-  | DW_OP_plus ->
+  | DW_OP_plus | DW_OP_minus | DW_OP_mul ->
+     let func = match op with
+       | DW_OP_plus -> (+)
+       | DW_OP_minus -> (-)
+       | DW_OP_mul -> ( * )
+     in
      (match stack with
-      | e1::e2::stack' -> Val((as_value e1) + (as_value e2))::stack'
-      | _ -> eval_error "DW_OP_plus: need two elements on stack")
+      | e1::e2::stack' -> Val(func (as_value e2) (as_value e1))::stack'
+      | _ -> eval_error "DW_OP_plus/minus/mul: need two elements on stack")
 
   | DW_OP_plus_uconst(x) ->
      (match stack with
       | e1::stack' -> Val((as_value e1) + x)::stack'
       | _ -> eval_error "DW_OP_plus_uconst: need an element on stack")
-
-  | DW_OP_mul ->
-     (match stack with
-      | e1::e2::stack' -> Val((as_value e1) * (as_value e2))::stack'
-      | _ -> eval_error "DW_OP_mul: need two elements on stack")
 
   | DW_OP_dup ->
      (match stack with
@@ -730,6 +731,11 @@ let _ =
 let _ =
   test (eval_all [DW_OP_lit9;
                   DW_OP_plus_uconst 5] [] context) [Val 14] "DW_OP_plus_uconst"
+
+let _ =
+  test (eval_all [DW_OP_const4s 9;
+                  DW_OP_const4s 5;
+                  DW_OP_minus] [] context) [Val 4] "DW_OP_minus"
 
 let _ =
   test (eval_all [DW_OP_lit9;
