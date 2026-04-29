@@ -39,8 +39,7 @@ type dwarf_op =
   | DW_OP_shl
   | DW_OP_shr
 
-  | DW_OP_lt
-  | DW_OP_eq
+  | DW_OP_le | DW_OP_ge | DW_OP_eq | DW_OP_lt | DW_OP_gt | DW_OP_ne
   | DW_OP_skip of int (* Number of operators to skip.  *)
   | DW_OP_bra of int (* Number of operators to skip.  *)
   | DW_OP_call of string (* Name of the DW_AT_location element in the context.  *)
@@ -412,23 +411,22 @@ let rec eval_one_simple op stack context =
       | e1::e2::stack' -> Val(Int.shift_right (as_value e2) (as_value e1))::stack'
       | _ -> eval_error "DW_OP_shr: need two elements on stack")
 
-  | DW_OP_lt ->
+  | DW_OP_le | DW_OP_ge | DW_OP_eq | DW_OP_lt | DW_OP_gt | DW_OP_ne ->
+     let comparison = match op with
+       | DW_OP_le -> (<=)
+       | DW_OP_ge -> (>=)
+       | DW_OP_eq -> (=)
+       | DW_OP_lt -> (<)
+       | DW_OP_gt -> (>)
+       | DW_OP_ne -> (<>)
+     in
      (match stack with
       | e1::e2::stack' ->
-         if (as_value e2) < (as_value e1) then
+         if comparison (as_value e2) (as_value e1) then
            Val(1)::stack'
          else
            Val(0)::stack'
-      | _ -> eval_error "DW_OP_lt: need two elements on stack")
-
-  | DW_OP_eq ->
-     (match stack with
-      | e1::e2::stack' ->
-         if (as_value e2) == (as_value e1) then
-           Val(1)::stack'
-         else
-           Val(0)::stack'
-      | _ -> eval_error "DW_OP_eq: need two elements on stack")
+      | _ -> eval_error "DW_OP_le/ge/eq/lt/gt/ne: need two elements on stack")
 
   | DW_OP_call(name) ->
      eval_all (dw_at_location context name) stack context
