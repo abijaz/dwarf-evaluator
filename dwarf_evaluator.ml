@@ -185,7 +185,7 @@ let simplify parts =
     match acc with
     | [] -> [(s, e, (st, off))]
     | (s', e', (st', off'))::acc' ->
-       if e == s' && st == st' && (off' - s') == (off - s) then
+       if e = s' && st = st' && (off' - s') = (off - s) then
          (s, e', (st, off))::acc'
        else
          (s, e, (st, off))::acc
@@ -276,7 +276,7 @@ let ints_to_data ns =
 
 (* Discard n elements from the head of the given list.  *)
 let rec discard n lst =
-  if n == 0 then lst
+  if n = 0 then lst
   else discard (n - 1) (List.tl lst)
 
 exception ConversionError of string * stack_element
@@ -510,7 +510,7 @@ let rec eval_one_simple op stack context =
   | DW_OP_undefined -> Loc(Undefined, 0)::stack
 
   | DW_OP_implicit_value(n, data) ->
-     if String.length data == n then
+     if String.length data = n then
        Loc(ImpData data, 0)::stack
      else
        eval_error ("DW_OP_implicit_value" ^ string_of_int n ^ ": data length does not match")
@@ -644,7 +644,7 @@ and eval_one ops stack context =
   | DW_OP_bra(n)::ops' ->
      (match stack with
       | v::stack' ->
-         if as_value v == 0 then
+         if as_value v = 0 then
            (ops', stack', context)
          else
            ((discard n ops'), stack', context)
