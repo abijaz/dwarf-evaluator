@@ -342,6 +342,7 @@ let rec eval_one_simple op stack context =
        | DW_OP_plus -> (+)
        | DW_OP_minus -> (-)
        | DW_OP_mul -> ( * )
+       | _ -> failwith "not reachable"
      in
      (match stack with
       | e1::e2::stack' -> Val(func (as_value e2) (as_value e1))::stack'
@@ -420,6 +421,7 @@ let rec eval_one_simple op stack context =
        | DW_OP_lt -> (<)
        | DW_OP_gt -> (>)
        | DW_OP_ne -> (<>)
+       | _ -> failwith "not reachable"
      in
      (match stack with
       | e1::e2::stack' ->
